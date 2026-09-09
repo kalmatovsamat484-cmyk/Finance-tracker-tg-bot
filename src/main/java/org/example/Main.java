@@ -1,10 +1,23 @@
 package org.example;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+
 public class Main {
+
     public static void main(String[] args) {
-ConsoleMenu consoleMenu = new ConsoleMenu();
-consoleMenu.consoleMenu();
+
+        try {
+            TelegramBotsApi botsApi =
+                    new TelegramBotsApi(DefaultBotSession.class);
+
+            botsApi.registerBot(new FinanceBot());
+
+            System.out.println("Bot started!");
+
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 }
