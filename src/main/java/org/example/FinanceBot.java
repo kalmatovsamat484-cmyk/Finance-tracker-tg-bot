@@ -17,7 +17,7 @@ public class FinanceBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "8862497801:AAEkm62f6ZYSICpKLixdQdcKrmxbvVeCrLo";
+        return "";
     }
 
     @Override
