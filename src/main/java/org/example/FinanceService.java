@@ -17,9 +17,9 @@ public class FinanceService {
         else
             incomes.add(new Income(amount));
     }
-    public void addExpenses (int wallet, double amount){
+    public void addExpenses (String wallet, double amount){
 
-        if (wallet == 1){
+        if (wallet.equals("\uD83D\uDCB6 Balance")){
             if (amount < 0){
                 System.out.println("Expense cannot be negative");
             }
@@ -32,7 +32,7 @@ public class FinanceService {
             else
                 expenses.add(new Expense(amount));
         }
-        else if (wallet == 2) {
+        else if (wallet.equals("\uD83D\uDCB3 Savings")) {
 
                 if (amount < 0) {
                     System.out.println("Expense cannot be negative");

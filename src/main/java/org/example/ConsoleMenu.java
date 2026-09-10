@@ -43,16 +43,16 @@ public class ConsoleMenu {
                 2. Savings
                 0. Exit
                 """);
-        int wallet = sc.nextInt();
-        if (wallet == 0) {
+        String wallet = sc.nextLine();
+        if (wallet.equals("")) {
             return;
-        } else if (wallet == 1) {
+        } else if (wallet.equals("\uD83D\uDCB6 Balance")) {
             System.out.println("""
                 Enter expense:
                 0. Exit""");
             double amount = sc.nextDouble();
             financeService.addExpenses(wallet, amount);
-        } else if (wallet == 2) {
+        } else if (wallet.equals("💳 Savings")){
             System.out.println("""
                     Are you sure you want to use your savings?
                     1.yes / 0.No
