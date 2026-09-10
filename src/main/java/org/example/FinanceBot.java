@@ -8,7 +8,12 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public class FinanceBot extends TelegramLongPollingBot {
 
-        FinanceService financeService = new FinanceService();
+    FinanceService financeService = new FinanceService();
+    boolean waitingForWallet=false;
+    boolean waitingforAmount=false;
+    int choose;
+    boolean waitingForSavings=false;
+    boolean waitingForSavingsAmount=false;
 
     @Override
     public String getBotUsername() {
@@ -43,9 +48,7 @@ public class FinanceBot extends TelegramLongPollingBot {
                     e.printStackTrace();
                 }
 
-            }
-            else if (messageText.equals("/balance")) {
-
+            } else if (messageText.equals("/balance")) {
                 SendMessage message = new SendMessage();
 
                 message.setChatId(String.valueOf(chatId));
@@ -58,29 +61,25 @@ public class FinanceBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
-            }
-            else if (messageText.startsWith("/income")){
-                String[] parts= messageText.split(" ");
-                if (parts.length==2){
+            } else if (messageText.startsWith("/income")) {
+                String[] parts = messageText.split(" ");
+                if (parts.length == 2) {
 
-                    try{
-                        SendMessage message=new SendMessage();
+                    try {
+                        SendMessage message = new SendMessage();
                         double amount = Double.parseDouble(parts[1]);
-                        financeService.addIncome(amount);
                         message.setChatId(String.valueOf(chatId));
-                        if (amount<=0){
+                        if (amount <= 0) {
                             message.setText("Income must be greater than zero");
                             execute(message);
-                        }
-                        else {
+                        } else {
                             financeService.addIncome(amount);
                             message.setText("Income: +" + amount);
                             execute(message);
                         }
-                    }catch (TelegramApiException e) {
+                    } catch (TelegramApiException e) {
                         e.printStackTrace();
-                    }
-                    catch (NumberFormatException e){
+                    } catch (NumberFormatException e) {
                         SendMessage message = new SendMessage();
                         message.setChatId(String.valueOf(chatId));
                         message.setText("Amount must be a number");
@@ -90,20 +89,236 @@ public class FinanceBot extends TelegramLongPollingBot {
                         } catch (TelegramApiException ex) {
                             ex.printStackTrace();
                         }
+
                     }
+                } else {
+                    try {
+                        SendMessage message = new SendMessage();
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("Please enter an amount. Example: /income 5000");
+                        execute(message);
+                    } catch (TelegramApiException e) {
+
                     }
                 }
-                else {
-                   try {
-                       SendMessage message = new SendMessage();
-                       message.setChatId(String.valueOf(chatId));
-                       message.setText("Please enter an amount. Example: /income 5000");
-                       execute(message);
-                   }catch (TelegramApiException e) {
-                       e.printStackTrace();
-                   }
+            }
+            else if (messageText.equals("/expense")) {
+
+                        SendMessage message = new SendMessage();
+
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("""
+                                Choose a wallet:
+                                1. Balance
+                                2. Savings
+                                """);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                waitingForWallet =true;
+                }
+            else if (waitingForWallet) {
+                SendMessage message = new SendMessage();
+                 choose = Integer.parseInt(messageText);
+                if (choose == 1) {
+
+                    message.setChatId(String.valueOf(chatId));
+                    message.setText("""
+                            you choosed a balance.
+                            Enter amount expense:
+                            """);
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                    waitingForWallet = false;
+                    waitingforAmount = true;
+                }
+                else if (choose == 2) {
+
+                    message.setChatId(String.valueOf(chatId));
+                    message.setText("""
+                            you choosed a Savings.
+                            Enter amount expense:
+                            """);
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                    waitingForWallet = false;
+                    waitingforAmount = true;
+                }
+            }
+                    else if (waitingforAmount) {
+                if (choose == 1) {
+                    SendMessage message = new SendMessage();
+                    double amount = Double.parseDouble(messageText);
+                    if (amount < 0) {
+
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("""
+                                Expense cannot be negative
+                                """);
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    } else if (financeService.getBalance() < amount) {
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("""
+                                Insufficient balance""");
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        financeService.addExpenses(choose, amount);
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("Expense: -" + amount);
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                        waitingforAmount = false;
+                    }
+                } else if (choose == 2) {
+                    SendMessage message = new SendMessage();
+                    double amount = Double.parseDouble(messageText);
+                    if (amount < 0) {
+
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("""
+                                Expense cannot be negative
+                                """);
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    } else if (financeService.getSavingsBalance() < amount) {
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("""
+                                Insufficient balance""");
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        financeService.addExpenses(choose, amount);
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("Expense: -" + amount);
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                        waitingforAmount = false;
+                    }
+                }
+                    }
+
+                    else if(messageText.equals("/savings")) {
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(chatId));
+                message.setText(
+                        "Your Saving balance: " + financeService.getSavingsBalance()
+
+                );
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                message.setText(
+                        "Press 1 to add money to savings"
+                );
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
                 }
 
+                waitingForSavings = true;
+
             }
+                else if ( waitingForSavings) {
+
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(chatId));
+                choose = Integer.parseInt(messageText);
+                if (choose == 1) {
+                    message.setText(
+                            "Enter amount: "
+
+                    );
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                    waitingForSavingsAmount = true;
+                    waitingForSavings = false;
+                } else {
+                    message.setText(
+                            "invalid input"
+
+                    );
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+                    else if (waitingForSavingsAmount){
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(chatId));
+                    double amount = Double.parseDouble(messageText);
+                    if (amount<0){
+                        message.setText("Saving cannot be negative");
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else if (financeService.getBalance()<amount){
+                        message.setText("""
+                                Insufficient balance""");
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else {
+                        financeService.addSavings(amount);
+                        message.setText(
+                                "Savings +" + amount
+
+                        );
+                        try {
+                            execute(message);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                waitingForSavingsAmount = false;
+                }
+                else
+                    return;
+            }
+
         }
     }
+
+

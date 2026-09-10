@@ -32,7 +32,7 @@ public class FinanceService {
             else
                 expenses.add(new Expense(amount));
         }
-        else if (wallet==2) {
+        else if (wallet == 2) {
 
                 if (amount < 0) {
                     System.out.println("Expense cannot be negative");
