@@ -1,5 +1,7 @@
 package org.example;
 
+import org.telegram.telegrambots.meta.api.objects.Message;
+
 import java.util.ArrayList;
 
 public class FinanceService {
@@ -30,7 +32,7 @@ public class FinanceService {
                 System.out.println("Insufficient balance");
             }
             else
-                expenses.add(new Expense(amount));
+                expenses.add(new Expense(wallet, amount));
         }
         else if (wallet.equals("\uD83D\uDCB3 Savings")) {
 
@@ -39,7 +41,7 @@ public class FinanceService {
                 } else if (getSavingsBalance() < amount) {
                     System.out.println("Insufficient balance");
                 } else
-                    savingsExpenses.add(new Expense(amount));
+                    savingsExpenses.add(new Expense(wallet, amount));
 
 
         }
@@ -89,7 +91,23 @@ return sumIncomes;
         }
         return sum;
     }
+    public double getHistoryTotalExpenses(){
+        double sum = 0;
+        for (Expense i: savingsExpenses){
+            sum+= i.getExpense();
+        }
+        for (Expense i: expenses){
+            sum += i.getExpense();}
+        return sum;
+    }
 
+
+    public double getIncomeHistory(){
+        double total=0;
+        for (Income i:incomes)
+            total += i.getIncome();
+        return total;
+    }
     public double getSavingsBalance(){
        return getTotalSavings() - getTotalSavingsExpenses();
     }

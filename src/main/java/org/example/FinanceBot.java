@@ -15,13 +15,14 @@ import java.util.List;
 public class FinanceBot extends TelegramLongPollingBot {
 
     FinanceService financeService = new FinanceService();
-    boolean waitingForWallet=false;
     boolean waitingforAmount=false;
     String choose;
     boolean waitingForSavings=false;
     boolean waitingForSavingsAmount=false;
     boolean isWaitingForIncome = false;
+    boolean waitingforHistory = false;
     int chose;
+    double sum=0;
 
     @Override
     public String getBotUsername() {
@@ -35,62 +36,119 @@ public class FinanceBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-if (update.hasCallbackQuery()){
-    String callbeckData = update.getCallbackQuery().getData();
-    if (callbeckData.equals("expense_balance")) {
-        choose = "\uD83D\uDCB6 Balance";
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        message.setText("""
-                            you choosed a balance.
-                            Enter amount expense:
-                            """);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        waitingForWallet = false;
-        waitingforAmount = true;
-    }
-    if (callbeckData.equals("expense_saving")){
-        choose="\uD83D\uDCB3 Savings";
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        message.setText("""
-                            you choosed a Savings.
-                            Enter amount expense:
-                            """);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        waitingForWallet = false;
-        waitingforAmount = true;
-    }
-    if (callbeckData.equals("add_saving")) {
-        choose = "Addsavings";
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
-        message.setText("""
-                           Enter amount:
-                           """);
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-        waitingForSavingsAmount = true;
-        waitingForSavings = false;
-    }
+        if (update.hasCallbackQuery()) {
+
+            String callbeckData = update.getCallbackQuery().getData();
+            long chatid = update.getCallbackQuery().getMessage().getChatId();
+            if (callbeckData.equals("expense_balance")) {
+                choose = "\uD83D\uDCB6 Balance";
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                message.setText("""
+                        you choosed a balance.
+                        Enter amount expense:
+                        """);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
+                waitingforAmount = true;
+            } else if (callbeckData.equals("expense_saving")) {
+                choose = "\uD83D\uDCB3 Savings";
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                message.setText("""
+                        you choosed a Savings.
+                        Enter amount expense:
+                        """);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
+                waitingforAmount = true;
+            } else if (callbeckData.equals("add_saving")) {
+                choose = "Addsavings";
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                message.setText("""
+                        Enter amount:
+                        """);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                waitingForSavingsAmount = true;
+                waitingForSavings = false;
+            } else if (callbeckData.equals("expense_history")) {
+                choose = "\u23F3\uFE0F expense_history";
+
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                StringBuilder text = new StringBuilder("Expense history:\n"+"sum:  "+financeService.getHistoryTotalExpenses()+"\n\n");
+                for (Expense expense: financeService.expenses)
+                    text.append(expense.getWallet())
+                            .append(": -")
+                            .append(expense.getExpense())
+                            .append("\n");
+                message.setText(text.toString());
+
+                for (Expense expense: financeService.savingsExpenses)
+                    text.append(expense.getWallet())
+                            .append(": -")
+                            .append(expense.getExpense())
+                            .append("\n");
+                message.setText(text.toString());
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
 
 
-}
+            } else if (callbeckData.equals("income_history")) {
+                choose = "⏳ income_history";
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                StringBuilder text = new StringBuilder("Incomes history:\n"+"sum: "+financeService.getIncomeHistory()+"\n\n");
+                for (Income income: financeService.incomes)
+                    text.append("+")
+                            .append(income.getIncome())
+                            .append("\n");
+                message.setText(text.toString());
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
+
+            }
+            else if (callbeckData.equals("income")) {
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(update.getCallbackQuery().getMessage().getChatId()));
+                message.setText("""
+                        Enter income amount: 
+                        """);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                isWaitingForIncome=true;
+            }
+            return;
+
+        }
+        long chatId = 0;
         if (update.hasMessage() && update.getMessage().hasText()) {
 
             String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
+            chatId = update.getMessage().getChatId();
 
             System.out.println(messageText);
 
@@ -105,11 +163,12 @@ if (update.hasCallbackQuery()){
                 ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
                 KeyboardRow row1 = new KeyboardRow();
                 row1.add(new KeyboardButton("\uD83D\uDCB0 Balance"));
-                row1.add(new KeyboardButton("\uD83D\uDCB5 Income"));
+                row1.add(new KeyboardButton("\uD83D\uDCB8 Expense"));
                 KeyboardRow row2 = new KeyboardRow();
-                row2.add(new KeyboardButton("\uD83D\uDCB8 Expense"));
                 row2.add(new KeyboardButton("\uD83C\uDFE6 Savings"));
-                keyboard.setKeyboard(List.of(row1,row2));
+                row2.add(new KeyboardButton("\uD83D\uDCC3 history"));
+
+                keyboard.setKeyboard(List.of(row1, row2));
                 message.setReplyMarkup(keyboard);
                 try {
                     execute(message);
@@ -117,7 +176,7 @@ if (update.hasCallbackQuery()){
                     e.printStackTrace();
                 }
 
-            } else if (messageText.equals("/balance")|| messageText.equals("\uD83D\uDCB0 Balance")) {
+            } else if (messageText.equals("/balance") || messageText.equals("\uD83D\uDCB0 Balance")) {
                 SendMessage message = new SendMessage();
 
                 message.setChatId(String.valueOf(chatId));
@@ -125,28 +184,19 @@ if (update.hasCallbackQuery()){
                         "Your balance: " + financeService.getBalance()
                 );
 
+                InlineKeyboardButton incomeButton = new InlineKeyboardButton();
+                incomeButton.setText("\uD83D\uDCB5 Income");
+                incomeButton.setCallbackData("income");
+                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+                keyboard.setKeyboard(List.of(
+                        List.of(incomeButton)));
+                message.setReplyMarkup(keyboard);
                 try {
                     execute(message);
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
-            } else if (messageText.startsWith("/income")|| messageText.equals("\uD83D\uDCB5 Income")) {
-                SendMessage message = new SendMessage();
-
-                message.setChatId(String.valueOf(chatId));
-                String[] parts = messageText.split(" ");
-
-                message.setText("""
-                            Enter income amount
-                            """);
-                try {
-                    execute(message);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-                isWaitingForIncome =true;
-            }
-            else if(isWaitingForIncome){
+            } else if (isWaitingForIncome) {
                 SendMessage message = new SendMessage();
 
                 message.setChatId(String.valueOf(chatId));
@@ -155,15 +205,15 @@ if (update.hasCallbackQuery()){
 
                     message.setChatId(String.valueOf(chatId));
                     message.setText("""
-                                Income cannot be negative
-                                """);
+                            Income cannot be negative
+                            """);
                     try {
                         execute(message);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
                     }
-                }  else {
-                    financeService.addIncome( amount);
+                } else {
+                    financeService.addIncome(amount);
                     message.setChatId(String.valueOf(chatId));
                     message.setText("Income: +" + amount);
                     try {
@@ -173,69 +223,35 @@ if (update.hasCallbackQuery()){
                     }
                     isWaitingForIncome = false;
 
-            }
-        }
-            else if (messageText.equals("/expense")||messageText.equals("\uD83D\uDCB8 Expense")) {
+                }
+            } else if (messageText.equals("/expense") || messageText.equals("\uD83D\uDCB8 Expense")) {
 
                 SendMessage message = new SendMessage();
                 message.setChatId(String.valueOf(chatId));
                 message.setText("""
-                                Choose a wallet:
-                                """);
-                InlineKeyboardButton balanceButton =new InlineKeyboardButton();
+                        Choose a wallet:
+                        """);
+                InlineKeyboardButton balanceButton = new InlineKeyboardButton();
                 balanceButton.setText("\uD83D\uDCB6 Balance");
                 balanceButton.setCallbackData("expense_balance");
-                InlineKeyboardButton savingsButton =new InlineKeyboardButton();
+                InlineKeyboardButton savingsButton = new InlineKeyboardButton();
                 savingsButton.setText("\uD83D\uDCB3 Savings");
                 savingsButton.setCallbackData("expense_saving");
-               InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
-                        keyboard.setKeyboard(List.of(
-                                List.of(balanceButton),
-                                List.of(savingsButton)));
-                        message.setReplyMarkup(keyboard);
+                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+                keyboard.setKeyboard(List.of(
+                        List.of(balanceButton),
+                        List.of(savingsButton)));
+                message.setReplyMarkup(keyboard);
                 try {
                     execute(message);
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
 
-                waitingForWallet =true;
-                }
-//            else if (waitingForWallet) {
-//                SendMessage message = new SendMessage();
-//                 choose = messageText;
-//                if (choose.equals("\uD83D\uDCB6 Balance")) {
-//
-//                    message.setChatId(String.valueOf(chatId));
-//                    message.setText("""
-//                            you choosed a balance.
-//                            Enter amount expense:
-//                            """);
-//                    try {
-//                        execute(message);
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                    waitingForWallet = false;
-//                    waitingforAmount = true;
-//                }
-//                else if (choose.equals("\uD83D\uDCB3 Savings")) {
-//
-//                    message.setChatId(String.valueOf(chatId));
-//                    message.setText("""
-//                            you choosed a Savings.
-//                            Enter amount expense:
-//                            """);
-//                    try {
-//                        execute(message);
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                    waitingForWallet = false;
-//                    waitingforAmount = true;
-//                }
-//            }
-                    else if (waitingforAmount) {
+            }
+
+
+            else if (waitingforAmount) {
                 if (choose.equals("\uD83D\uDCB6 Balance")) {
                     SendMessage message = new SendMessage();
                     double amount = Double.parseDouble(messageText);
@@ -305,16 +321,14 @@ if (update.hasCallbackQuery()){
                         waitingforAmount = false;
                     }
                 }
-                    }
-
-                    else if(messageText.equals("/savings")|| messageText.equals("\uD83C\uDFE6 Savings")) {
+            } else if (messageText.equals("/savings") || messageText.equals("\uD83C\uDFE6 Savings")) {
                 SendMessage message = new SendMessage();
                 message.setChatId(String.valueOf(chatId));
                 message.setText(
                         "Your Saving balance: " + financeService.getSavingsBalance()
 
                 );
-                InlineKeyboardButton addSaving =new InlineKeyboardButton();
+                InlineKeyboardButton addSaving = new InlineKeyboardButton();
                 addSaving.setText("Add Savings");
                 addSaving.setCallbackData("add_saving");
                 InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
@@ -331,76 +345,72 @@ if (update.hasCallbackQuery()){
                 waitingForSavings = true;
 
             }
-//                else if ( waitingForSavings) {
-//
-//                SendMessage message = new SendMessage();
-//                message.setChatId(String.valueOf(chatId));
-//                chose = Integer.parseInt(messageText);
-//                if (chose == 1) {
-//                    message.setText(
-//                            "Enter amount: "
-//
-//                    );
-//                    try {
-//                        execute(message);
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                    waitingForSavingsAmount = true;
-//                    waitingForSavings = false;
-//                } else {
-//                    message.setText(
-//                            "invalid input"
-//
-//                    );
-//                    try {
-//                        execute(message);
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-                    else if (waitingForSavingsAmount){
+
+            else if (waitingForSavingsAmount) {
                 SendMessage message = new SendMessage();
                 message.setChatId(String.valueOf(chatId));
-                    double amount = Double.parseDouble(messageText);
-                    if (amount<0){
-                        message.setText("Saving cannot be negative");
-                        try {
-                            execute(message);
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                        }
+                double amount = Double.parseDouble(messageText);
+                if (amount < 0) {
+                    message.setText("Saving cannot be negative");
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
                     }
-                    else if (financeService.getBalance()<amount){
-                        message.setText("""
-                                Insufficient balance""");
-                        try {
-                            execute(message);
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                        }
+                } else if (financeService.getBalance() < amount) {
+                    message.setText("""
+                            Insufficient balance""");
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
                     }
-                    else {
-                        financeService.addSavings(amount);
-                        message.setText(
-                                "Savings +" + amount
+                } else {
+                    financeService.addSavings(amount);
+                    message.setText(
+                            "Savings +" + amount
 
-                        );
-                        try {
-                            execute(message);
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                        }
-
+                    );
+                    try {
+                        execute(message);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
                     }
-                waitingForSavingsAmount = false;
+
                 }
-                else
-                    return;
+                waitingForSavingsAmount = false;
+            } else if (messageText.equals("/history") || messageText.equals("\uD83D\uDCC3 history")) {
+                SendMessage message = new SendMessage();
+                message.setChatId(String.valueOf(chatId));
+                message.setText("""
+                        Choose a history income or expense:
+                        """);
+                InlineKeyboardButton expenseButton = new InlineKeyboardButton();
+                expenseButton.setText("\u23F3\uFE0F expense history");
+                expenseButton.setCallbackData("expense_history");
+                InlineKeyboardButton incomeButton = new InlineKeyboardButton();
+                incomeButton.setText("⏳ income_history");
+                incomeButton.setCallbackData("income_history");
+                InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+                keyboard.setKeyboard(List.of(
+                        List.of(incomeButton),
+                        List.of(expenseButton)));
+                message.setReplyMarkup(keyboard);
+                try {
+                    execute(message);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
+                waitingforHistory = true;
             }
 
-        }
+
+        } else
+            return;
+
+    }
+
     }
 
 
